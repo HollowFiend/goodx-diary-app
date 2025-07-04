@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GoodX Diary – Dashboard</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <header>
+    <h1 id="diaryTitle">Diary</h1>
+    <button id="logout">Log out</button>
+  </header>
+
+  <section>
+    <h2>Today’s bookings</h2>
+    <table id="bookings">
+      <thead>
+        <tr><th>Time</th><th>Patient</th><th>Reason</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>New booking</h2>
+    <form id="createForm">
+      <select id="patientSelect"></select>
+      <input id="time" type="time" value="08:00" required />
+      <input id="duration" type="number" value="15" min="5" required /> min
+      <input id="reason" placeholder="Reason" />
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
