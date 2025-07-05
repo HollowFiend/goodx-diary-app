@@ -3,35 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <title>GoodX Diary – Dashboard</title>
+
+  <!-- your existing global stylesheet -->
   <link rel="stylesheet" href="css/main.css" />
+
+  <!-- light, component-scoped cosmetics -->
+  <style>
+    /* -------- overall layout -------- */
+    body            { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 60rem; }
+    header          { display: flex; align-items: center; justify-content: space-between;
+                      padding: 1rem 1.2rem; background: #1e88e5; color:#fff; }
+    h1              { font-size: 1.4rem; margin: 0; }
+    h2              { font-size: 1.2rem; margin:.8rem 0 .4rem; }
+
+    /* -------- table -------- */
+    table           { width:100%; border-collapse:collapse; }
+    th,td           { padding:.45rem .6rem; text-align:left; border-bottom:1px solid #e0e0e0; }
+    th              { background:#fafafa; }
+    tbody tr:hover  { background:#f7faff; }
+
+    /* action buttons inside rows */
+    .row-btn        { cursor:pointer; border:none; background:none; font-size:1rem; }
+    .row-btn.edit   { color:#1976d2; }
+    .row-btn.del    { color:#d32f2f; }
+
+    /* -------- dialogs (native <dialog>) -------- */
+    dialog::backdrop { background: rgba(0,0,0,.35); }
+    dialog form     { display:grid; gap:.8rem; min-width:20rem; }
+    dialog label    { display:flex; flex-direction:column; font-size:.9rem; }
+    dialog menu     { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.4rem; }
+    dialog h3       { margin:0 0 .2rem; }
+
+    /* -------- toast from dashboard.js -------- */
+    .toast          { position:fixed; bottom:1rem; right:1rem;
+                      background:#323232; color:#fff; padding:.6rem 1rem;
+                      border-radius:4px; font-size:.85rem; opacity:.95; }
+
+    /* misc */
+    #openCreate     { margin:1rem 0; padding:.4rem .9rem; font-size:.9rem; }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+  </style>
+
+  <!-- Polyfill for Safari / old Edge (safe to ignore if you target only Chromium/FF) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/dialog-polyfill@0.5/dist/dialog-polyfill.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dialog-polyfill@0.5/dist/dialog-polyfill.min.css">
 </head>
+
 <body>
+  <!-- ═══════════ Header ═══════════ -->
   <header>
-    <h1 id="diaryTitle">Diary</h1>
-    <button id="logout">Log out</button>
+    <h1 id="diaryTitle">Diary&nbsp;</h1>
+    <button id="logout" title="(not wired yet)">Log&nbsp;out</button>
   </header>
 
+  <!-- ═══════════ Day’s bookings ═══════════ -->
   <section>
     <h2>Today’s bookings</h2>
     <table id="bookings">
       <thead>
-        <tr><th>Time</th><th>Patient</th><th>Reason</th><th></th></tr>
+        <tr><th>Time</th><th>Patient</th><th>Reason</th><th style="width:5rem"></th></tr>
       </thead>
       <tbody></tbody>
     </table>
   </section>
 
-  <section>
-    <h2>New booking</h2>
-    <form id="createForm">
-      <select id="patientSelect"></select>
-      <input id="time" type="time" value="08:00" required />
-      <input id="duration" type="number" value="15" min="5" required /> min
-      <input id="reason" placeholder="Reason" />
-      <button type="submit">Add</button>
-    </form>
-  </section>
+  <!-- ═══════════ Create booking button ═══════════ -->
+  <button id="openCreate">➕&nbsp;New booking</button>
 
+  <!-- ═══════════ Create dialog ═══════════ -->
+  <dialog id="createDialog">
+    <form method="dialog">
+      <h3>Create booking</h3>
+
+      <label>Patient
+        <select id="patientSelect" required></select>
+      </label>
+
+      <label>Type
+        <select id="typeSelect" required></select>
+      </label>
+
+      <label>Time
+        <input id="c_time" type="time" required>
+      </label>
+
+      <label>Duration&nbsp;(min)
+        <input id="c_duration" type="number" value="15" min="5" required>
+      </label>
+
+      <label>Reason
+        <input id="c_reason" placeholder="Reason">
+      </label>
+
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button type="submit">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- ═══════════ Edit dialog ═══════════ -->
+  <dialog id="editDialog">
+    <form method="dialog">
+      <h3>Edit booking</h3>
+
+      <label>Time
+        <input id="e_time" type="time" required>
+      </label>
+
+      <label>Duration&nbsp;(min)
+        <input id="e_duration" type="number" min="5" required>
+      </label>
+
+      <label>Reason
+        <input id="e_reason">
+      </label>
+
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button type="submit">Update</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- ═══════════ App logic ═══════════ -->
   <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>
