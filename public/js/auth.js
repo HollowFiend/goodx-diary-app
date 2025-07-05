@@ -5,32 +5,27 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   error.textContent = '';
 
+  /* ------- remove any stale cookies from previous runs ------- */
+  ['session_uid', 'session'].forEach(
+    c => document.cookie = `${c}=; Path=/; SameSite=None; Secure; Max-Age=0`
+  );
+
   const body = JSON.stringify({
     model: { timeout: 259_200 },
     auth : [['password', { username: username.value, password: password.value }]],
   });
 
   try {
-    /* 1 – POST /api/session */
-    const { data } = await gxFetch('/session', {
+    /* 1 — POST /api/session
+       gxFetch will forward Set-Cookie ↦ browser stores session_uid */
+    const { status } = await gxFetch('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
     });
+    if (status !== 'OK') throw new Error('Login failed');
 
-    const uid = data?.uid;
-    if (!uid) throw new Error('No uid in response');
-
-    /* 2 – remove any old cookies (match Path + SameSite + Secure) */
-    ['session_uid', 'session'].forEach(
-      c => document.cookie = `${c}=; Path=/; SameSite=None; Secure; Max-Age=0`
-    );
-
-    /* 3 – save the required cookie */
-    // SameSite=None is safest because our proxy and frontend share the origin.
-    document.cookie = `session=${uid}; Path=/; SameSite=None; Secure`;
-
-    /* 4 – into the dashboard */
+    /* 2 — jump to dashboard (cookie already set) */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
