@@ -5,32 +5,19 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   error.textContent = '';
 
-  /* -------- remove any stale cookies ---------- */
-  for (const c of ['session', 'session_uid']) {
-    document.cookie = `${c}=; Path=/; SameSite=None; Secure; Max-Age=0`;
-  }
-
-  /* -------- call /api/session ---------- */
-  const body = JSON.stringify({
-    model: { timeout: 259_200 },
-    auth : [['password', { username: username.value, password: password.value }]]
-  });
-
   try {
-    const { data } = await gxFetch('/session', {
+    /* 1 — login (server sends the two Set-Cookie headers) */
+    await gxFetch('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body
+      body   : JSON.stringify({
+        model: { timeout: 259_200 },
+        auth : [['password', { username: username.value, password: password.value }]]
+      })
+      /*  credentials:"include" lives inside gxFetch  */
     });
 
-    const uid = data?.uid;
-    if (!uid) throw new Error('No uid in response');
-
-    /* -------- store BOTH cookies ---------- */
-    const attrs = '; Path=/; SameSite=None; Secure';
-    document.cookie = `session=${uid}${attrs}`;
-    document.cookie = `session_uid=${uid}${attrs}`;
-
+    /* 2 — cookies are now in the jar → go to dashboard */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
