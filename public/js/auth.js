@@ -22,9 +22,7 @@ loginForm.addEventListener('submit', async e => {
     if (!sessionUid) throw new Error('No session_uid in response');
 
     // 3. Store it as a cookie on our origin
-    // Path=/  -> sent to every page
-    // SameSite=None; Secure -> works on HTTPS
-    document.cookie = `session_uid=${sessionUid}; Path=/; SameSite=None; Secure`;
+    document.cookie = `session=${uid}; Path=/; SameSite=Lax; Secure`;
 
     // 4. Go to dashboard
     location.href = 'dashboard.html';
