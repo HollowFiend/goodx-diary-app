@@ -5,19 +5,31 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   error.textContent = '';
 
+  /* wipe any leftovers */
+  ['session', 'session_uid'].forEach(
+    c => (document.cookie = `${c}=; Path=/; Max-Age=0; SameSite=None; Secure`)
+  );
+
   try {
-    /* 1 — login (server sends the two Set-Cookie headers) */
-    await gxFetch('/session', {
+    /* 1 — login */
+    const { data } = await gxFetch('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
         model: { timeout: 259_200 },
-        auth : [['password', { username: username.value, password: password.value }]]
-      })
-      /*  credentials:"include" lives inside gxFetch  */
+        auth : [['password', { username: username.value, password: password.value }]],
+      }),
     });
 
-    /* 2 — cookies are now in the jar → go to dashboard */
+    const token = data?.uid;
+    if (!token) throw new Error('No session token in response');
+
+    /* 2 — GXWeb expects *both* cookies */
+    const attrs = '; Path=/; SameSite=None; Secure';
+    document.cookie = `session=${token}${attrs}`;
+    document.cookie = `session_uid=${token}${attrs}`;
+
+    /* 3 — dashboard */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
