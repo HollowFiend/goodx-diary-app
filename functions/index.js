@@ -6,11 +6,10 @@ exports.apiProxy = functions.onRequest(
   async (req, res) => {
     try {
       const upstream =
-        'https://dev_interview.qagoodx.co.za' +
-        req.originalUrl.replace(/^\/api/, '');
+        'https://dev_interview.qagoodx.co.za/api' +   // keep /api
+        req.originalUrl.replace(/^\/api/, '');        // remove first /api only
 
-      const hdrs = { ...req.headers };
-      delete hdrs.host;                    // avoid 400 from upstream
+      const hdrs = { ...req.headers }; delete hdrs.host;
 
       const apiRes = await fetch(upstream, {
         method : req.method,
