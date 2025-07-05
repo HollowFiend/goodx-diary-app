@@ -1,33 +1,37 @@
 // public/js/auth.js
-import { gxFetch } from './api.js';
+import { gxRaw } from './api.js';   // gxRaw is the “no-parse” helper in api.js
 
-loginForm.addEventListener('submit', async e => {
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  error.textContent = '';           // clear any old error
 
+  /* ---------- build body ---------- */
   const body = JSON.stringify({
     model: { timeout: 259_200 },
-    auth : [['password', { username: username.value, password: password.value }]]
+    auth : [['password', { username: username.value, password: password.value }]],
   });
 
   try {
-    // 1. POST /api/session
-    const resp = await gxFetch('/session', {
+    /* ---------- POST /api/session ---------- */
+    const res = await gxRaw('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body
+      body,
     });
+    if (!res.ok) throw new Error('Bad credentials');
 
-    // 2. GoodX returns { data: { uid: "<session_uuid>" }, ... }
-    const sessionUid = resp?.data?.uid;
-    if (!sessionUid) throw new Error('No session_uid in response');
+    /* ---------- read uid from JSON ---------- */
+    const json      = await res.json();              // { data: { uid: "…" }, … }
+    const sessionId = json?.data?.uid || json?.uid;  // fallback
+    if (!sessionId) throw new Error('No uid in response');
 
-    // 3. Store it as a cookie on our origin
-    document.cookie = `session=${uid}; Path=/; SameSite=Lax; Secure`;
+    /* ---------- store cookie the way GoodX expects ---------- */
+    document.cookie = `session=${sessionId}; Path=/; SameSite=Lax; Secure`;
 
-    // 4. Go to dashboard
+    /* ---------- go to dashboard ---------- */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
-    error.textContent = 'Bad credentials';
+    error.textContent = 'Login failed';
   }
 });
