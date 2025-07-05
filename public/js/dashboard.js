@@ -1,11 +1,8 @@
 // public/js/dashboard.js
 import { gxFetch } from './api.js';
 
-/* ---------- helpers ---------- */
-const $ = s => document.querySelector(s);
-const enc = obj => encodeURIComponent(JSON.stringify(obj));   // JSON → URI
-
 /* ---------- DOM ---------- */
+const $ = s => document.querySelector(s);
 const diaryTitle   = $('#diaryTitle');
 const bookingsBody = $('#bookings tbody');
 const createForm   = $('#createForm');
@@ -22,36 +19,36 @@ let entityUid, diaryUid, bookingTypeUid, bookingStatusUid;
 /*  Bootstrap – diaries → booking types → patients → booking list      */
 /* ------------------------------------------------------------------ */
 (async function init () {
-  /* 1. diaries */
-  const diaryFields = enc(['uid', 'entity_uid', 'name']);
-  const diaries = await gxFetch(`/diary?fields=${diaryFields}`);
+  /* 1. diaries ---------------------------------------------------- */
+  const diaries = await gxFetch(
+    '/diary?fields=["uid","entity_uid","name"]'
+  );
   ({ uid: diaryUid, entity_uid: entityUid } = diaries.data[0]);
   diaryTitle.textContent = diaries.data[0].name;
 
-  /* 2. booking types */
-  const typeFields = enc(['uid', 'name', 'booking_status_uid']);
-  const typeFilter = enc(['AND',
-    ['=', ['I','entity_uid'], ['L', entityUid]],
-    ['=', ['I','diary_uid' ], ['L', diaryUid ]]
-  ]);
+  /* 2. booking types --------------------------------------------- */
   const types = await gxFetch(
-    `/booking_type?fields=${typeFields}&filter=${typeFilter}`
+    `/booking_type?fields=["uid","name","booking_status_uid"]` +
+    `&filter=["AND",` +
+      `["=",["I","entity_uid"],["L",${entityUid}]],` +
+      `["=",["I","diary_uid" ],["L",${diaryUid}]]` +
+    `]`
   );
   const consult = types.data.find(t => t.name.toLowerCase() === 'consultation');
   bookingTypeUid   = consult.uid;
   bookingStatusUid = consult.booking_status_uid;
 
-  /* 3. patients */
-  const patFields = enc(['uid','name','surname']);
-  const patFilter = enc(['=',['I','entity_uid'],['L', entityUid]]);
-  const patients  = await gxFetch(
-    `/patient?fields=${patFields}&filter=${patFilter}&limit=100`
+  /* 3. patients --------------------------------------------------- */
+  const patients = await gxFetch(
+    `/patient?fields=["uid","name","surname"]` +
+    `&filter=["=",["I","entity_uid"],["L",${entityUid}]]` +
+    `&limit=100`
   );
   patientSel.innerHTML = patients.data
     .map(p => `<option value="${p.uid}">${p.surname} ${p.name}</option>`)
     .join('');
 
-  /* 4. initial list */
+  /* 4. initial list ---------------------------------------------- */
   await loadBookings();
 })();
 
@@ -59,27 +56,24 @@ let entityUid, diaryUid, bookingTypeUid, bookingStatusUid;
 /*  List bookings                        */
 /* ------------------------------------- */
 async function loadBookings () {
-  const bookFields = enc([
-    ['AS',['I','patient_uid','surname'],'patient_surname'],
-    ['AS',['I','patient_uid','name'   ],'patient_name'   ],
-    'uid','start_time','duration','reason','cancelled'
-  ]);
-
-  const bookFilter = enc(['AND',
-    ['=', ['I','diary_uid'], ['L', diaryUid]],
-    ['=', ['::',['I','start_time'],['I','date']], ['L', today]],
-    ['NOT', ['I','cancelled']]
-  ]);
-
   const res = await gxFetch(
-    `/booking?fields=${bookFields}&filter=${bookFilter}`
+    `/booking?fields=[` +
+      `["AS",["I","patient_uid","surname"],"patient_surname"],` +
+      `["AS",["I","patient_uid","name"   ],"patient_name"   ],` +
+      `"uid","start_time","duration","reason","cancelled"` +
+    `]` +
+    `&filter=["AND",` +
+      `["=",["I","diary_uid"],["L",${diaryUid}]],` +
+      `["=",["::",["I","start_time"],["I","date"]],["L","${today}"]],` +
+      `["NOT",["I","cancelled"]]` +
+    `]`
   );
 
   bookingsBody.innerHTML = res.data.map(b => {
     const hhmm = b.start_time.split('T')[1].slice(0,5);
     return `<tr data-id="${b.uid}" data-duration="${b.duration}">
       <td>${hhmm}</td>
-      <td>${b.patient_surname} ${b.patient_name}</td>
+      <td>${b.patient_surname ?? ''} ${b.patient_name ?? ''}</td>
       <td>${b.reason ?? ''}</td>
       <td>
         <button class="edit" title="Edit">✎</button>
@@ -112,7 +106,7 @@ createForm.addEventListener('submit', async e => {
   await gxFetch('/booking', {
     method : 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body   : JSON.stringify(body)
+    body: JSON.stringify(body)
   });
 
   createForm.reset();
