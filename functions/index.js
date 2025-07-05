@@ -1,45 +1,58 @@
+// functions/index.js
 const functions = require('firebase-functions/v2/https');
+const https     = require('node:https');           // ← NEW
 const fetch     = (...a) => import('node-fetch').then(m => m.default(...a));
+
+// Keep a single agent so Cloud Functions won’t strip Cookie / Auth headers
+const keepCookieAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
 exports.apiProxy = functions.onRequest(
   { cors: [true], maxInstances: 2 },
   async (req, res) => {
     try {
-      // keep one /api in the upstream path
+      /* -------- build upstream URL -------- */
       const upstream =
         'https://dev_interview.qagoodx.co.za/api' +
         req.originalUrl.replace(/^\/api/, '');
 
-      const hdrs = { ...req.headers };
-      delete hdrs.host;
+      /* -------- minimal header set --------
+         – host must NOT be forwarded
+         – cookie is the whole point here
+      -------------------------------------- */
+      const outHeaders = {
+        cookie        : req.headers.cookie || '',
+        'content-type': req.headers['content-type'] || '',
+      };
 
+      /* -------- call GoodX -------- */
       const apiRes = await fetch(upstream, {
         method  : req.method,
-        headers : hdrs,
+        headers : outHeaders,
         body    : ['GET','HEAD'].includes(req.method) ? undefined : req.rawBody,
-        redirect: 'manual'
+        redirect: 'manual',
+        agent   : keepCookieAgent          // ← keeps Cookie intact
       });
 
-      /* ---------- forward status & headers ---------- */
+      /* -------- pipe status & headers back -------- */
       res.status(apiRes.status);
 
-      // 1. copy *all* Set-Cookie headers
-      const rawCookies = apiRes.headers.raw()['set-cookie'];
-      if (rawCookies) res.setHeader('set-cookie', rawCookies);
+      // copy Set-Cookie(s) if GoodX refreshes the session
+      const setCookies = apiRes.headers.raw()['set-cookie'];
+      if (setCookies) res.setHeader('set-cookie', setCookies);
 
-      // 2. copy everything else, except gzip markers we stripped before
+      // copy everything else except gzip metadata we stripped
       apiRes.headers.forEach((v, k) => {
         const h = k.toLowerCase();
-        if (h !== 'set-cookie' && h !== 'content-encoding' && h !== 'content-length') {
+        if (!['set-cookie','content-encoding','content-length'].includes(h)) {
           res.setHeader(k, v);
         }
       });
 
-      // 3. add CORS for browser
+      // allow browser to read cookies
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-      /* ---------- stream body ---------- */
+      /* -------- stream body -------- */
       apiRes.body.pipe(res);
 
     } catch (err) {
