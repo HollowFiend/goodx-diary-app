@@ -75,28 +75,39 @@
     <form method="dialog">
       <h3>Create booking</h3>
 
+      
+  
       <label>Patient
         <select id="patientSelect" required></select>
       </label>
-
+  
       <label>Type
         <select id="typeSelect" required></select>
       </label>
 
+      <label>Status
+  <select id="statusSelect" required></select>   <!-- NEW -->
+</label>
+
+      <label>Date
+        <input id="c_date" type="date" />
+      </label>
+  
+  
       <label>Time
         <input id="c_time" type="time" required>
       </label>
-
+  
       <label>Duration&nbsp;(min)
         <input id="c_duration" type="number" value="15" min="5" required>
       </label>
-
+  
       <label>Reason
         <input id="c_reason" placeholder="Reason">
       </label>
-
+  
       <menu>
-        <button value="cancel">Cancel</button>
+        <button class="cancel" value="cancel">Cancel</button>
         <button type="submit">Save</button>
       </menu>
     </form>
@@ -120,7 +131,7 @@
       </label>
 
       <menu>
-        <button value="cancel">Cancel</button>
+        <button value="cancel" type="button">Cancel</button>
         <button type="submit">Update</button>
       </menu>
     </form>

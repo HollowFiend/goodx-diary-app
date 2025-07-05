@@ -1,220 +1,228 @@
-// public/js/dashboard.js – revamped to meet every spec in the GoodX
-// applicant‑test brief (CRUD on bookings, patient picker, etc.)
-// ---------------------------------------------------------------------------
-// Assumptions
-//   • api.js exports gxFetch(path, opts) which already sends credentials
-//   • The surrounding HTML contains the elements referenced by the selectors
-//   • styles / minimal dialog polyfill are loaded in <head>
-// ---------------------------------------------------------------------------
-
+// public/js/dashboard.js
 import { gxFetch } from './api.js';
 
-/* ───────────────────────── helpers ───────────────────────── */
-const $          = sel => document.querySelector(sel);
-const enc        = obj => encodeURIComponent(JSON.stringify(obj));
-const todayISO   = () => new Date().toISOString().split('T')[0];
-const hhmm       = date => date.toTimeString().slice(0,5);
-const alertToast = msg => {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  t.className = 'toast';
-  document.body.append(t);
-  setTimeout(()=>t.remove(), 3500);
-};
+/* helpers */
+const $   = s => document.querySelector(s);
+const enc = o => encodeURIComponent(JSON.stringify(o));
+const today = new Date().toISOString().split('T')[0];
+const hhmm  = d => d.toTimeString().slice(0,5);
+const toast = m => { const t=document.createElement('div');t.textContent=m;
+  t.className='toast';document.body.append(t);setTimeout(()=>t.remove(),3500); };
 
-/* ───────────────────────── DOM refs ───────────────────────── */
-const diaryTitle     = $('#diaryTitle');
-const bookingsBody   = $('#bookings tbody');
-const createBtn      = $('#openCreate');
-const createDlg      = $('#createDialog');
-const editDlg        = $('#editDialog');
-const patientSel     = $('#patientSelect');
-const typeSel        = $('#typeSelect');
+/* DOM */
+const diaryTitle   = $('#diaryTitle');
+const bookingsBody = $('#bookings tbody');
+const createBtn    = $('#openCreate');
+const createDlg    = $('#createDialog');
+const editDlg      = $('#editDialog');
+const patientSel   = $('#patientSelect');
+const typeSel      = $('#typeSelect');
+const cTime   = $('#c_time');
+const cDate = $('#c_date');
+const cDur    = $('#c_duration');
+const cReason = $('#c_reason');
+const eTime   = $('#e_time');
+const eDur    = $('#e_duration');
+const eReason = $('#e_reason');
+const statusSel = $('#statusSelect');
 
-// 🆕 form inputs inside dialogs
-const cTime   = createDlg.querySelector('#c_time');
-const cDur    = createDlg.querySelector('#c_duration');
-const cReason = createDlg.querySelector('#c_reason');
-const eTime   = editDlg.querySelector('#e_time');
-const eDur    = editDlg.querySelector('#e_duration');
-const eReason = editDlg.querySelector('#e_reason');
-
-/* ───────────────────────── runtime state ──────────────────── */
-let entityUid, diaryUid;
+/* runtime */
+let entityUid, diaryUid, treatingDoctorUid, serviceCenterUid;
 let bookingTypeUid, bookingStatusUid;
-const dateStr = todayISO();
+let statusMap = [];  
 
-/* ───────────────────────── bootstrap ───────────────────────── */
-(async function init () {
-  try {
-    await hydrateDiary();
-    await hydrateBookingTypes();
-    await hydratePatients();
-    await renderBookings();
-  } catch (err) {
-    console.error(err);
-    alertToast('Failed initial load');
-  }
-})();
+/* bootstrap */
+(async ()=>{ try{
+  await loadDiary();
+  await loadBookingTypes();
+  await loadBookingStatuses(); 
+  await loadPatients();
+  await renderBookings();
+}catch(e){console.error(e);toast('Initial load failed');} })();
 
-/* ──────────────────────── data loaders ─────────────────────── */
-async function hydrateDiary () {
-  const diaries = await gxFetch(`/diary?fields=${enc(['uid','entity_uid','name'])}`);
-  ({ uid: diaryUid, entity_uid: entityUid, name: diaryTitle.textContent } = diaries.data[0]);
+/* -------------- data loaders ---------------- */
+async function loadDiary(){
+  const f=['uid','entity_uid','name','treating_doctor_uid','service_center_uid'];
+  const {data:[d]} = await gxFetch(`/diary?fields=${enc(f)}`);
+  diaryUid          = d.uid;
+  entityUid         = d.entity_uid;
+  treatingDoctorUid = d.treating_doctor_uid;   // NEW
+  serviceCenterUid  = d.service_center_uid;    // NEW
+  diaryTitle.textContent = d.name;
 }
 
-async function hydrateBookingTypes () {
-  const f = ['uid','name','booking_status_uid'];
+/* --------- load statuses once ---------- */
+async function loadBookingStatuses () {
+  const f = ['uid','name','disabled'];
   const filter = ['AND',
-    ['=', ['I','entity_uid'], ['L', entityUid]],
-    ['=', ['I','diary_uid' ], ['L', diaryUid ]]
+      ['=', ['I','entity_uid'], ['L', entityUid]],
+      ['=', ['I','diary_uid' ], ['L', diaryUid ]],
+      ['NOT',['I','disabled']]
   ];
-  const res = await gxFetch(`/booking_type?fields=${enc(f)}&filter=${enc(filter)}`);
-  // default to Consultation, else first
-  const consult = res.data.find(t=>t.name.toLowerCase()==='consultation') || res.data[0];
-  bookingTypeUid   = consult.uid;
-  bookingStatusUid = consult.booking_status_uid;
-  // populate select
-  typeSel.innerHTML = res.data.map(t=>`<option value="${t.uid}|${t.booking_status_uid}">${t.name}</option>`).join('');
-  typeSel.value = `${bookingTypeUid}|${bookingStatusUid}`;
+  const { data } =
+      await gxFetch(`/booking_status?fields=${enc(f)}&filter=${enc(filter)}`);
+
+  statusMap = data;
+  statusSel.innerHTML =
+    data.map(s => `<option value="${s.uid}">${s.name}</option>`).join('');
 }
 
-async function hydratePatients () {
-  const f = ['uid','name','surname'];
-  const filter = ['=', ['I','entity_uid'], ['L', entityUid]];
-  const res = await gxFetch(`/patient?fields=${enc(f)}&filter=${enc(filter)}&limit=500`);
-  patientSel.innerHTML = res.data.map(p=>`<option value="${p.uid}">${p.surname} ${p.name}</option>`).join('');
+async function loadBookingTypes(){
+  const f=['uid','name','booking_status_uid'];
+  const filter=['AND',['=',['I','entity_uid'],['L',entityUid]],['=',['I','diary_uid'],['L',diaryUid]]];
+  const {data} = await gxFetch(`/booking_type?fields=${enc(f)}&filter=${enc(filter)}`);
+  const def = data.find(t=>t.name.toLowerCase()==='consultation') || data[0];
+  bookingTypeUid=def.uid; bookingStatusUid=def.booking_status_uid;
+  typeSel.innerHTML = data.map(t=>`<option value="${t.uid}|${t.booking_status_uid}">${t.name}</option>`).join('');
+  typeSel.value=`${bookingTypeUid}|${bookingStatusUid}`;
 }
 
-/* ─────────────────────── render bookings ──────────────────── */
-async function renderBookings () {
-  const fields = [
+async function loadPatients(){
+  const f=['uid','name','surname'];
+  const filter=['=', ['I','entity_uid'], ['L',entityUid]];
+  const {data} = await gxFetch(`/patient?fields=${enc(f)}&filter=${enc(filter)}&limit=500`);
+  patientSel.innerHTML = data.map(p=>`<option value="${p.uid}">${p.surname} ${p.name}</option>`).join('');
+}
+
+/* -------------- table renderer -------------- */
+async function renderBookings(){
+  const fields=[
     ['AS',['I','patient_uid','surname'],'patient_surname'],
-    ['AS',['I','patient_uid','name'   ],'patient_name'   ],
-    'uid','start_time','duration','reason','cancelled'
+    ['AS',['I','patient_uid','name'],'patient_name'],
+    'uid','start_time','duration','reason'
   ];
-  const filter = ['AND',
-    ['=', ['I','diary_uid'], ['L', diaryUid]],
-    ['=', ['::',['I','start_time'],['I','date']], ['L', dateStr]],
+  const filter=['AND',
+    ['=', ['I','diary_uid'], ['L',diaryUid]],
+    ['=', ['::',['I','start_time'],['I','date']], ['L',today]],
     ['NOT',['I','cancelled']]
   ];
-  const res = await gxFetch(`/booking?fields=${enc(fields)}&filter=${enc(filter)}`);
-
-  bookingsBody.innerHTML = res.data.map(b=>`
+  const {data}=await gxFetch(`/booking?fields=${enc(fields)}&filter=${enc(filter)}`);
+  bookingsBody.innerHTML = data.map(b=>`
     <tr data-id="${b.uid}" data-duration="${b.duration}">
-      <td>${b.start_time.split('T')[1].slice(0,5)}</td>
-      <td>${b.patient_surname ?? ''} ${b.patient_name ?? ''}</td>
-      <td>${b.reason ?? ''}</td>
+      <td>${b.start_time.slice(11,16)}</td>
+      <td>${b.patient_surname??''} ${b.patient_name??''}</td>
+      <td>${b.reason??''}</td>
       <td>
-        <button class="edit" title="Edit">✎</button>
-        <button class="del"  title="Delete">🗑</button>
+        <button class="edit">✎</button>
+        <button class="del">🗑</button>
       </td>
     </tr>`).join('');
 }
 
-/* ───────────────────────── create flow ─────────────────────── */
-createBtn.addEventListener('click', ()=>{
-  // reset & open dialog
-  cTime.value   = hhmm(new Date());
-  cDur.value    = 15;
+
+
+/* ─────────────── create-booking workflow ──────────────── */
+
+/* 1️⃣  “New booking” button opens the dialog */
+createBtn.onclick = () => {
+  /* make sure the required <select>s have something selected */
+  if (patientSel.selectedIndex === -1) patientSel.selectedIndex = 0;
+  if (typeSel   .selectedIndex === -1) typeSel   .selectedIndex = 0;
+  if (statusSel .selectedIndex === -1) statusSel .selectedIndex = 0;
+
+  /* pre-fill date/time */
+  cDate.value = today;
+  cTime.value = new Date().toTimeString().slice(0, 5);
+  cDur.value  = 15;
   cReason.value = '';
   createDlg.showModal();
-});
+};
 
+/* 2️⃣  “Cancel” button just closes the dialog */
+createDlg.querySelector('.cancel').onclick = () => createDlg.close();
+
+/* 3️⃣  Submit  →  POST /api/booking */
 createDlg.addEventListener('submit', async e => {
   e.preventDefault();
   try {
-    const [typeUid,statusUid] = typeSel.value.split('|').map(Number);
+    const [typeUidStr, fallback] = typeSel.value.split('|');
+    const typeUid   = Number(typeUidStr);
+    const statusUid = Number(statusSel.value)            // chosen status
+                   || Number(fallback)                   // default from type
+                   || bookingStatusUid;                  // last resort
+
+    const dateISO = cDate.value || today;
+
     await gxFetch('/booking', {
       method : 'POST',
       headers: { 'Content-Type':'application/json' },
-body: JSON.stringify({
-  model: {
-    uid                : null,                 // or 'new' + Date.now()
-    entity_uid         : entityUid,
-    diary_uid          : diaryUid,
-    booking_type_uid   : typeUid,
-    booking_status_uid : statusUid,
-    patient_uid        : +patientSel.value,
-    treating_doctor_uid: treatingDoctorUid,    // (lookup once from diary cache)
-    service_center_uid : serviceCenterUid,     // (lookup once from diary cache)
-    start_time         : `${dateStr}T${cTime.value}:00`,
-    duration           : +cDur.value,
-    reason             : cReason.value || null,
-    cancelled          : false
-  },
-  fields: ['uid']      // only if you care which columns come back
-})
-
+      body   : JSON.stringify({
+        model : {
+          uid                : null,
+          entity_uid         : entityUid,
+          diary_uid          : diaryUid,
+          booking_type_uid   : typeUid,
+          booking_status_uid : statusUid,   // never null now ✅
+          patient_uid        : +patientSel.value,
+          start_time         : `${dateISO}T${cTime.value}:00`,
+          duration           : +cDur.value,
+          reason             : cReason.value || null,
+          cancelled          : false
+        },
+        fields : ['uid']
+      })
     });
+
     createDlg.close();
-    alertToast('Booking created');
+    toast('Booking created');
     await renderBookings();
-  } catch(err) {
+  } catch (err) {
     console.error(err);
-    alertToast('Create failed');
+    toast('Create failed');
   }
 });
 
-/* ───────────────────────── edit / delete ───────────────────── */
-bookingsBody.addEventListener('click', async e=>{
-  const row = e.target.closest('tr');
-  if(!row) return;
+
+
+
+
+/* ---------------- edit / delete ------------- */
+bookingsBody.onclick = async ev=>{
+  const row = ev.target.closest('tr'); if(!row) return;
   const id = +row.dataset.id;
 
-  // DELETE ---------------------------------------------------
-  if(e.target.classList.contains('del')) {
+  /* Delete */
+  if(ev.target.classList.contains('del')){
     if(!confirm('Delete this booking?')) return;
-    try {
+    try{
       await gxFetch(`/booking/${id}`,{
-        method :'PUT',
+        method:'PUT',
         headers:{'Content-Type':'application/json'},
-        body   :JSON.stringify({model:{uid:id, cancelled:true}})
+        body:JSON.stringify({model:{uid:id,cancelled:true}})
       });
-      alertToast('Deleted');
-      await renderBookings();
-    } catch(err){
-      console.error(err); alertToast('Delete failed');
-    }
+      toast('Deleted'); await renderBookings();
+    }catch(e){console.error(e);toast('Delete failed');}
     return;
   }
 
-  // EDIT -----------------------------------------------------
-  if(e.target.classList.contains('edit')) {
-    // pre‑fill dialog with current row values
-    eTime.value   = row.children[0].textContent;
-    eDur.value    = row.dataset.duration;
-    eReason.value = row.children[2].textContent;
+  /* Edit */
+  if(ev.target.classList.contains('edit')){
+    eTime.value = row.children[0].textContent;
+    eDur.value  = row.dataset.duration;
+    eReason.value=row.children[2].textContent;
     editDlg.showModal();
+    editDlg.querySelector('.cancel').onclick = ()=>editDlg.close();  // NEW
 
-    editDlg.onsubmit = async ev => {
-      ev.preventDefault();
-      try {
+    editDlg.onsubmit = async e=>{
+      e.preventDefault();
+      try{
         await gxFetch(`/booking/${id}`,{
-          method :'PUT',
+          method:'PUT',
           headers:{'Content-Type':'application/json'},
-          body   :JSON.stringify({
-            model:{
-              uid       :id,
-              start_time:`${dateStr}T${eTime.value}:00`,
-              duration  :+eDur.value,
-              reason    :eReason.value
-            }
-          })
-        });
-        editDlg.close();
-        alertToast('Updated');
-        await renderBookings();
-      } catch(err){
-        console.error(err); alertToast('Update failed');
-      }
+          body:JSON.stringify({model:{
+            uid:id,
+            start_time:`${today}T${eTime.value}:00`,
+            duration:+eDur.value,
+            reason:eReason.value
+        }})});
+        editDlg.close();toast('Updated');await renderBookings();
+      }catch(er){console.error(er);toast('Update failed');}
     };
   }
-});
+};
 
-/* ───────────────────────── misc styling helper ─────────────── */
-// quick‑n‑dirty toast styles (inject once)
+/* toast css */
 (function(){
-  const css = `.toast{position:fixed;bottom:1rem;right:1rem;background:#333;color:#fff;padding:.6rem 1rem;border-radius:4px;font-size:.9rem;opacity:.95}`;
-  const s = document.createElement('style'); s.textContent = css; document.head.append(s);
+  const css='.toast{position:fixed;bottom:1rem;right:1rem;background:#333;color:#fff;padding:.5rem .8rem;border-radius:4px;font-size:.85rem}';
+  const s=document.createElement('style');s.textContent=css;document.head.append(s);
 })();
