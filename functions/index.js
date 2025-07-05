@@ -1,58 +1,55 @@
-// functions/index.js
 const functions = require('firebase-functions/v2/https');
-const https     = require('node:https');           // ← NEW
 const fetch     = (...a) => import('node-fetch').then(m => m.default(...a));
-
-// Keep a single agent so Cloud Functions won’t strip Cookie / Auth headers
-const keepCookieAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
 exports.apiProxy = functions.onRequest(
   { cors: [true], maxInstances: 2 },
   async (req, res) => {
     try {
-      /* -------- build upstream URL -------- */
+      /* ───────── build upstream URL ───────── */
       const upstream =
         'https://dev_interview.qagoodx.co.za/api' +
         req.originalUrl.replace(/^\/api/, '');
 
-      /* -------- minimal header set --------
-         – host must NOT be forwarded
-         – cookie is the whole point here
-      -------------------------------------- */
-      const outHeaders = {
-        cookie        : req.headers.cookie || '',
-        'content-type': req.headers['content-type'] || '',
-      };
+      /* ───────── copy headers, strip host ─── */
+      const hdrs = { ...req.headers };
+      delete hdrs.host;
 
-      /* -------- call GoodX -------- */
+      /* ★★★ strip the session_uid cookie ★★★ */
+      if (hdrs.cookie) {
+        hdrs.cookie = hdrs.cookie
+          .split(';')
+          .map(s => s.trim())
+          .filter(c => !c.startsWith('session_uid='))
+          .join('; ');
+        if (!hdrs.cookie) delete hdrs.cookie;
+      }
+
+      /* ───────── upstream fetch ───────────── */
       const apiRes = await fetch(upstream, {
         method  : req.method,
-        headers : outHeaders,
+        headers : hdrs,
         body    : ['GET','HEAD'].includes(req.method) ? undefined : req.rawBody,
-        redirect: 'manual',
-        agent   : keepCookieAgent          // ← keeps Cookie intact
+        redirect: 'manual'
       });
 
-      /* -------- pipe status & headers back -------- */
+      /* ───────── forward status & headers ─── */
       res.status(apiRes.status);
 
-      // copy Set-Cookie(s) if GoodX refreshes the session
-      const setCookies = apiRes.headers.raw()['set-cookie'];
-      if (setCookies) res.setHeader('set-cookie', setCookies);
+      // forward Set-Cookie from upstream (but we *don’t* add session_uid ourselves)
+      const rawCookies = apiRes.headers.raw()['set-cookie'];
+      if (rawCookies) res.setHeader('set-cookie', rawCookies);
 
-      // copy everything else except gzip metadata we stripped
       apiRes.headers.forEach((v, k) => {
         const h = k.toLowerCase();
-        if (!['set-cookie','content-encoding','content-length'].includes(h)) {
+        if (h !== 'set-cookie' && h !== 'content-encoding' && h !== 'content-length') {
           res.setHeader(k, v);
         }
       });
 
-      // allow browser to read cookies
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-      /* -------- stream body -------- */
+      /* ───────── stream body ──────────────── */
       apiRes.body.pipe(res);
 
     } catch (err) {
