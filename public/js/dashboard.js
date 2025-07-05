@@ -2,7 +2,7 @@
 import { gxFetch } from './api.js';
 
 /* ---------- DOM ---------- */
-const $ = s => document.querySelector(s);
+const $ = (s) => document.querySelector(s);
 const diaryTitle   = $('#diaryTitle');
 const bookingsBody = $('#bookings tbody');
 const createForm   = $('#createForm');
@@ -12,17 +12,23 @@ const durInput     = $('#duration');
 const reasonInput  = $('#reason');
 
 /* ---------- state ---------- */
-const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+const today = new Date().toISOString().split('T')[0];   // YYYY-MM-DD
 let entityUid, diaryUid, bookingTypeUid, bookingStatusUid;
 
 /* ------------------------------------------------------------------ */
-/*  Bootstrap – diaries → booking types → patients → booking list      */
+/*  Bootstrap sequence                                                 */
 /* ------------------------------------------------------------------ */
 (async function init () {
   /* 1. diaries ---------------------------------------------------- */
   const diaries = await gxFetch(
     '/diary?fields=["uid","entity_uid","name"]'
   );
+
+  if (!diaries.data?.length) {
+    alert('No diaries available for this user.');
+    return;
+  }
+
   ({ uid: diaryUid, entity_uid: entityUid } = diaries.data[0]);
   diaryTitle.textContent = diaries.data[0].name;
 
@@ -34,7 +40,11 @@ let entityUid, diaryUid, bookingTypeUid, bookingStatusUid;
       `["=",["I","diary_uid" ],["L",${diaryUid}]]` +
     `]`
   );
-  const consult = types.data.find(t => t.name.toLowerCase() === 'consultation');
+
+  const consult = types.data.find(
+    (t) => t.name?.toLowerCase() === 'consultation'
+  ) ?? types.data[0];
+
   bookingTypeUid   = consult.uid;
   bookingStatusUid = consult.booking_status_uid;
 
@@ -44,11 +54,12 @@ let entityUid, diaryUid, bookingTypeUid, bookingStatusUid;
     `&filter=["=",["I","entity_uid"],["L",${entityUid}]]` +
     `&limit=100`
   );
-  patientSel.innerHTML = patients.data
-    .map(p => `<option value="${p.uid}">${p.surname} ${p.name}</option>`)
-    .join('');
 
-  /* 4. initial list ---------------------------------------------- */
+  patientSel.innerHTML = patients.data.map(
+    (p) => `<option value="${p.uid}">${p.surname} ${p.name}</option>`
+  ).join('');
+
+  /* 4. first render ---------------------------------------------- */
   await loadBookings();
 })();
 
@@ -69,8 +80,8 @@ async function loadBookings () {
     `]`
   );
 
-  bookingsBody.innerHTML = res.data.map(b => {
-    const hhmm = b.start_time.split('T')[1].slice(0,5);
+  bookingsBody.innerHTML = res.data.map((b) => {
+    const hhmm = b.start_time.split('T')[1].slice(0, 5);
     return `<tr data-id="${b.uid}" data-duration="${b.duration}">
       <td>${hhmm}</td>
       <td>${b.patient_surname ?? ''} ${b.patient_name ?? ''}</td>
@@ -86,7 +97,7 @@ async function loadBookings () {
 /* ------------------------------------- */
 /*  Create                               */
 /* ------------------------------------- */
-createForm.addEventListener('submit', async e => {
+createForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const body = {
@@ -105,8 +116,8 @@ createForm.addEventListener('submit', async e => {
 
   await gxFetch('/booking', {
     method : 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: { 'Content-Type':'application/json' },
+    body   : JSON.stringify(body)
   });
 
   createForm.reset();
@@ -116,7 +127,7 @@ createForm.addEventListener('submit', async e => {
 /* ------------------------------------- */
 /*  Edit & Delete                        */
 /* ------------------------------------- */
-bookingsBody.addEventListener('click', async e => {
+bookingsBody.addEventListener('click', async (e) => {
   const row = e.target.closest('tr');
   if (!row) return;
   const id = row.dataset.id;
@@ -126,8 +137,8 @@ bookingsBody.addEventListener('click', async e => {
     if (confirm('Delete this booking?')) {
       await gxFetch(`/booking/${id}`, {
         method : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ model: { uid:+id, cancelled:true } })
+        headers: { 'Content-Type':'application/json' },
+        body   : JSON.stringify({ model:{ uid:+id, cancelled:true } })
       });
       await loadBookings();
     }
@@ -144,7 +155,7 @@ bookingsBody.addEventListener('click', async e => {
 
     await gxFetch(`/booking/${id}`, {
       method : 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type':'application/json' },
       body   : JSON.stringify({
         model: {
           uid       : +id,
