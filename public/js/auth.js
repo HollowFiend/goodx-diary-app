@@ -3,7 +3,7 @@ import { gxFetch } from './api.js';
 
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  error.textContent = '';            // clear any previous error
+  error.textContent = '';
 
   const body = JSON.stringify({
     model: { timeout: 259_200 },
@@ -11,22 +11,24 @@ loginForm.addEventListener('submit', async (e) => {
   });
 
   try {
-    /* ---------- POST /api/session ---------- */
+    /* 1. POST /api/session */
     const json = await gxFetch('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
-    });                                  // gxFetch throws if status not OK
+    });
 
-    /* ---------- extract uid ---------- */
-    const sessionId = json?.data?.uid || json?.uid;
-    if (!sessionId) throw new Error('No uid in response');
+    /* 2. Extract the UID the API returns */
+    const uid = json?.data?.uid || json?.uid;
+    if (!uid) throw new Error('No uid in response');
 
-    /* ---------- store cookie ---------- */
-    // GoodX expects cookie name:  session
-    document.cookie = `session=${sessionId}; Path=/; SameSite=Lax; Secure`;
+    /* 3. Remove any old cookie named "session" (just in case) */
+    document.cookie = 'session=; Max-Age=0; Path=/';
 
-    /* ---------- go to dashboard ---------- */
+    /* 4. Save UID exactly as GXWeb expects */
+    document.cookie = `session_uid=${uid}; Path=/; SameSite=Lax; Secure`;
+
+    /* 5. Go to dashboard */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
