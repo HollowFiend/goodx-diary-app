@@ -1,7 +1,7 @@
 // public/js/auth.js
 import { gxFetch } from './api.js';
 
-loginForm.addEventListener('submit', async (e) => {
+loginForm.addEventListener('submit', async e => {
   e.preventDefault();
   error.textContent = '';
 
@@ -11,24 +11,25 @@ loginForm.addEventListener('submit', async (e) => {
   });
 
   try {
-    /* 1. POST /api/session */
-    const json = await gxFetch('/session', {
+    /* 1 – login */
+    const { data } = await gxFetch('/session', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
     });
 
-    /* 2. Extract the UID the API returns */
-    const uid = json?.data?.uid || json?.uid;
+    const uid = data?.uid;
     if (!uid) throw new Error('No uid in response');
 
-    /* 3. Remove any old cookie named "session" (just in case) */
+    /* 2 – clear any old cookies */
     document.cookie = 'session=; Max-Age=0; Path=/';
+    document.cookie = 'session_uid=; Max-Age=0; Path=/';
 
-    /* 4. Save UID exactly as GXWeb expects */
-    document.cookie = `session_uid=${uid}; Path=/; SameSite=Lax; Secure`;
+    /* 3 – set the required cookie */
+    // SameSite=Lax so it’s sent to /api calls on same origin
+    document.cookie = `session=${uid}; Path=/; SameSite=Lax; Secure`;
 
-    /* 5. Go to dashboard */
+    /* 4 – go to dashboard */
     location.href = 'dashboard.html';
   } catch (err) {
     console.error(err);
