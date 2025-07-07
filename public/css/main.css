@@ -1,5 +1,154 @@
-body{font-family:system-ui,sans-serif;max-width:800px;margin:auto;}
-table{width:100%;border-collapse:collapse;}
-td,th{border-bottom:1px solid #ddd;padding:4px 8px;}
-button{cursor:pointer;}
-.error{color:red;}
+/* public/css/main.css */
+
+/* ── overall page ───────────────────────────────────── */
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0 auto;
+  max-width: 65rem;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  background: #1e88e5;
+  color: #fff;
+}
+header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+/* ── FullCalendar tweaks ────────────────────────────── */
+#calendar {
+  margin: 1rem 0;
+}
+.fc-day-today {
+  background: #f0f7ff !important;
+}
+.fc-event {
+  cursor: pointer;
+}
+.fc-toolbar-title {
+  font-size: 1.1rem;
+}
+
+/* ── “New booking” button ──────────────────────────── */
+#openCreate {
+  display: inline-block;
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: #1e88e5;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#openCreate:hover {
+  background: #1565c0;
+}
+
+/* ── dialogs (native <dialog>) ──────────────────────── */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+dialog {
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+}
+dialog form {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 22rem;
+}
+dialog h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.1rem;
+}
+dialog label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+/* ── dialog buttons ─────────────────────────────────── */
+dialog menu button {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+dialog menu button.cancel {
+  background: #ccc;
+  color: #333;
+}
+dialog menu button.delete {
+  background: #e53935;
+  color: #fff;
+}
+dialog menu button[type="submit"] {
+  background: #1e88e5;
+  color: #fff;
+}
+dialog menu button:hover {
+  opacity: 0.9;
+}
+
+/* ── toast messages ─────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #323232;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  opacity: 0.95;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  background-color: #1e88e5;
+  color: #fff;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+#logout {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+#logout:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+#logout:active {
+  background: rgba(255,255,255,0.3);
+}
+
+
+
+
+

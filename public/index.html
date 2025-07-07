@@ -1,13 +1,169 @@
-<!DOCTYPE html><html lang="en">
-<head><meta charset="UTF-8"><title>GoodX Diary – Login</title>
-<link rel="stylesheet" href="css/main.css"></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GoodX Diary – Login</title>
+  <link rel="icon" href="https://dev_interview.qagoodx.co.za/images/mygc.ico" />
+  <link rel="stylesheet" href="css/main.css" />
+
+  <!-- Ionicons for the little mail/lock icons -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+    <style>
+    /* make body a full-screen flex container */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(45deg,
+        rgba(58,123,213,1) 0%,
+        rgba(58,213,186,1) 50%,
+        rgba(213,58,58,1) 100%
+      );
+      background-size: 400% 400%;
+      animation: bgAnim 15s ease infinite;
+      font-family: 'Poppins', sans-serif;
+    }
+    @keyframes bgAnim {
+      0%   { background-position:0% 50%; }
+      50%  { background-position:100% 50%; }
+      100% { background-position:0% 50%; }
+    }
+
+    /* container takes full viewport, centers its child */
+    .glass-container {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.3);
+      backdrop-filter: blur(15px);
+      border-radius: 16px;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+
+    /* form itself is fluid but capped */
+    .login-form {
+      width: 100%;
+      max-width: 360px;
+      color: #fff;
+      text-align: center;
+    }
+    .login-form h1 {
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      font-weight: 500;
+    }
+
+    /* input styles */
+    .inputbox {
+      position: relative;
+      margin: 1rem 0;
+    }
+    .inputbox ion-icon {
+      position: absolute;
+      right: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2rem;
+      color: #fff;
+    }
+    .inputbox input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid rgba(255,255,255,0.6);
+      padding: .75rem 2.5rem .75rem .5rem;
+      font-size: 1rem;
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .inputbox label {
+      position: absolute;
+      left: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.8);
+      pointer-events: none;
+      transition: all .3s ease;
+    }
+    .inputbox input:focus + label,
+    .inputbox input:valid + label {
+      top: -0.6rem;
+      font-size: .8rem;
+      color: #fff;
+    }
+
+    /* submit */
+    .login-form button {
+      width: 100%;
+      padding: .75rem;
+      margin-top: 1.25rem;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.8);
+      color: #333;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .3s ease;
+    }
+    .login-form button:hover {
+      background: rgba(255,255,255,0.6);
+    }
+
+    /* error text */
+    .error {
+      color: #ff6b6b;
+      font-size: .9rem;
+      margin-top: .75rem;
+      min-height: 1.2rem;
+    }
+  </style>
+
+</head>
 <body>
-  <h1>GoodX Diary</h1>
-  <form id="loginForm">
-    <input id="username" placeholder="Username" required>
-    <input id="password" placeholder="Password" type="password" required>
-    <button type="submit">Log in</button>
-    <p id="error" class="error"></p>
-  </form>
+  <section class="glass-container">
+    <form class="login-form" id="loginForm" action="javascript:void(0);">
+      <h1>GoodX Diary</h1>
+
+      <div class="inputbox">
+        <ion-icon name="mail-outline"></ion-icon>
+        <input type="text"
+               name="username"
+               id="username"
+               placeholder=" "
+               autocomplete="off"
+               required />
+        <label for="username">Username</label>
+      </div>
+
+      <div class="inputbox">
+        <ion-icon name="lock-closed-outline"></ion-icon>
+        <input type="password"
+               name="password"
+               id="password"
+               placeholder=" "
+               autocomplete="off"
+               required />
+        <label for="password">Password</label>
+      </div>
+
+      <button type="submit">Log in</button>
+      <p id="error" class="error"></p>
+    </form>
+  </section>
+
   <script type="module" src="js/auth.js"></script>
-</body></html>
+</body>
+</html>
