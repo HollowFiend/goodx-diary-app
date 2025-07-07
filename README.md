@@ -6,7 +6,7 @@ GoodX Diary is a web application designed to manage diary bookings through an in
 
 ## Prerequisites
 
-* A modern web browser (Chrome, Firefox, Edge, or Safari).
+* A modern web browser (Chrome).
 * **Optional:** Node.js (for using `http-server` or `serve`).
 * **Optional:** Python 3 (for using the built-in HTTP server).
 
