@@ -150,4 +150,4 @@ You can customize the app using these files:
 
 * If bookings or login don't work, check your browser's console for errors.
 * Ensure cookies are enabled, as they're required for session authentication.
-* If you see CORS errors, confirm your API server allows requests from your domain.
+* If you see CORS errors, confirm your API server allows requests from your domain.( This is why there is a proxy) (Just be whitelisted on the origins API’s CORS list then no need for proxy)
